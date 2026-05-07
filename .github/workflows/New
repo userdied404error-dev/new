@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cat Platformer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #87CEEB;
+            font-family: Arial;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+            background: #cceeff;
+        }
+        #msg {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+
+<div id="msg">Deaths: 0 | Speed: 4</div>
+<canvas id="game" width="800" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const msg = document.getElementById("msg");
+
+// Load cat image
+const catImg = new Image();
+catImg.src = "https://i.imgur.com/JYUB0m3.png"; // simple cat sprite
+
+let gravity = 0.5;
+let deaths = 0;
+let baseSpeed = 4;
+let speed = baseSpeed;
+
+let player = {
+    x: 100,
+    y: 300,
+    w: 40,
+    h: 40,
+    dx: 0,
+    dy: 0,
+    onGround: false
+};
+
+let keys = {};
+let canJump = true;
+
+let platforms = [
+    {x:0, y:370, w:800, h:30},
+    {x:200, y:300, w:120, h:10},
+    {x:380, y:250, w:120, h:10},
+    {x:560, y:200, w:120, h:10}
+];
+
+// Input
+document.addEventListener("keydown", e => {
+    keys[e.key] = true;
+
+    if (e.key === " " && player.onGround && canJump) {
+        player.dy = -10;
+        player.onGround = false;
+        canJump = false;
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key] = false;
+    if (e.key === " ") canJump = true;
+});
+
+// Update
+function update() {
+    if (keys["ArrowRight"]) player.dx = speed;
+    else if (keys["ArrowLeft"]) player.dx = -speed;
+    else player.dx = 0;
+
+    player.x += player.dx;
+
+    // Keep inside screen
+    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+    // Gravity
+    player.dy += gravity;
+    player.y += player.dy;
+
+    player.onGround = false;
+
+    // Platform collision
+    for (let p of platforms) {
+        if (
+            player.x < p.x + p.w &&
+            player.x + player.w > p.x &&
+            player.y + player.h > p.y &&
+            player.y + player.h < p.y + p.h + 10 &&
+            player.dy >= 0
+        ) {
+            player.y = p.y - player.h;
+            player.dy = 0;
+            player.onGround = true;
+        }
+    }
+
+    // Death
+    if (player.y > canvas.height) {
+        deaths++;
+        speed = Math.max(1, baseSpeed - deaths * 0.3);
+        resetPlayer();
+
+        if (deaths >= 10) {
+            msg.innerText = "You are slower than tortoise 🐢";
+        } else {
+            msg.innerText = `Deaths: ${deaths} | Speed: ${speed.toFixed(2)}`;
+        }
+    }
+}
+
+function resetPlayer() {
+    player.x = 100;
+    player.y = 300;
+    player.dy = 0;
+    player.dx = 0;
+}
+
+// Draw
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw cat (fallback if image not loaded)
+    if (catImg.complete) {
+        ctx.drawImage(catImg, player.x, player.y, player.w, player.h);
+    } else {
+        ctx.fillStyle = "red";
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    // Platforms
+    ctx.fillStyle = "green";
+    for (let p of platforms) {
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+    }
+}
+
+// Loop
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
